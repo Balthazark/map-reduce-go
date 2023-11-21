@@ -31,39 +31,7 @@ func ihash(key string) int {
 // main/mrworker.go calls this function.
 //
 func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string) string) {
-    for {
-        // Step 1: Send an RPC to the coordinator asking for a task
-        args := TaskRequestArgs{} 
-        var reply TaskRequestReply 
-        ok := call("Coordinator.GetTask", &args, &reply)
-        if !ok {
-            break // Assuming coordinator has exited, worker can terminate
-        }
-
-        // Step 2: Check the type of task received and perform the corresponding action
-        if reply.TaskType == MapTask {
-            // Step 3: Read the intermediate file for the Map task
-            intermediate := readIntermediateFile(reply.FileName)
-
-            // Step 4: Call the application Map function
-            output := mapf(reply.FileName, intermediate)
-
-            // Step 5: Send the Map output back to the coordinator
-            mapOutputArgs := MapOutputArgs{
-                TaskType: MapTask,
-                FileName: reply.FileName,
-                Output:   output,
-            }
-            var mapOutputReply MapOutputReply
-            ok := call("Coordinator.MapTaskCompleted", &mapOutputArgs, &mapOutputReply)
-            if !ok {
-                break // Assuming coordinator has exited, worker can terminate
-            }
-        } else {
-            // Handle Reduce task
-            // Similar steps as above, but for Reduce task
-        }
-    }
+   //TODO, implement call to coordinator 
 }
 
 // readIntermediateFile reads the content of an intermediate file associated with a Map task.
@@ -87,7 +55,7 @@ func readIntermediateFile(fileName string) string {
 //
 // the RPC argument and reply types are defined in rpc.go.
 //
-func CallExample() {
+/* func CallExample() {
 
 	// declare an argument structure.
 	args := ExampleArgs{}
@@ -109,7 +77,7 @@ func CallExample() {
 	} else {
 		fmt.Printf("call failed!\n")
 	}
-}
+} */
 
 //
 // send an RPC request to the coordinator, wait for the response.
