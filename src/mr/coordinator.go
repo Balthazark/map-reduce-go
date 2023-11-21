@@ -1,17 +1,25 @@
 package mr
 
-import "log"
-import "net"
-import "os"
-import "net/rpc"
-import "net/http"
+import (
+	"log"
+	"net"
+	"net/http"
+	"net/rpc"
+	"os"
+	"sync"
+)
 
 
 type Coordinator struct {
-	// Your definitions here.
-
+    mu         sync.Mutex // Mutex for protecting shared data
+    mapTasks   []Task     // List of Map tasks
+    reduceTasks []Task     // List of Reduce tasks
 }
-
+// Task represents a Map or Reduce task.
+type Task struct {
+    FileName  string // Name of the input file for the task
+    Completed bool   // Flag indicating whether the task is completed
+}
 // Your code here -- RPC handlers for the worker to call.
 
 //
@@ -23,6 +31,9 @@ func (c *Coordinator) Example(args *ExampleArgs, reply *ExampleReply) error {
 	reply.Y = args.X + 1
 	return nil
 }
+
+
+
 
 
 //
