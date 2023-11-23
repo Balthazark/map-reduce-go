@@ -62,7 +62,7 @@ func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
 	return errors.New("all tasks completed")
 }
 
-func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error{
+func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -93,7 +93,39 @@ func (c *Coordinator) server() {
 // main/mrcoordinator.go calls Done() periodically to find out
 // if the entire job has finished.
 func (c *Coordinator) Done() bool {
-	return true
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if c.mapTasksRemaining == 0 && c.reduceTasksRemaining == 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+// Handle timeouts for workers
+func (c *Coordinator) ReAssignTimeoutTasks() {
+	for {
+		if c.mapTasksRemaining > 0 {
+
+			for _, task := range c.mapTasks {
+				if task.taskState == BUSY && time.Since(task.timestamp).Seconds() > 10 {
+					c.mutex.Lock()
+					task.taskState = READY
+					c.mutex.Unlock()
+				}
+			}
+		} else if c.reduceTasksRemaining > 0 {
+			for _, task := range c.reduceTasks {
+				if task.taskState == BUSY && time.Since(task.timestamp).Seconds() > 10 {
+					c.mutex.Lock()
+					task.taskState = READY
+					c.mutex.Unlock()
+				}
+			}
+
+		}
+	}
+
 }
 
 // create a Coordinator.
@@ -126,7 +158,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		c.reduceTasks = append(c.reduceTasks, task)
 	}
 
-	//Implement time out tasks
+	go c.ReAssignTimeoutTasks()
 
 	c.server()
 	return &c
