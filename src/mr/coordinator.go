@@ -62,6 +62,20 @@ func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
 	return errors.New("all tasks completed")
 }
 
+func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error{
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if args.taskType == MAP {
+		c.mapTasks[args.taskId].taskState = COMPLETED
+		c.mapTasksRemaining -= 1
+	} else {
+		c.reduceTasks[args.taskId].taskState = COMPLETED
+		c.reduceTasksRemaining -= 1
+	}
+	return nil
+}
+
 // start a thread that listens for RPCs from worker.go
 func (c *Coordinator) server() {
 	rpc.Register(c)

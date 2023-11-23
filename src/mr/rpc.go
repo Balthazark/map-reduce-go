@@ -38,10 +38,12 @@ type TaskResponse struct {
 	nReduce  int
 }
 
-type TaskDoneResponse struct {
-	taskName string
+type TaskDoneArgs struct {
+	taskId int
 	taskType TaskType
 }
+
+type TaskDoneResponse struct {}
 
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the coordinator.
