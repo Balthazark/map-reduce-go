@@ -9,16 +9,7 @@ package mr
 import (
 	"os"
 	"strconv"
-	"time"
 )
-
-type TaskArgs struct {
-}
-
-type TaskResponse struct {
-	file     string
-	taskType TaskType
-}
 
 // Add your RPC definitions here.
 type TaskState int
@@ -37,18 +28,19 @@ const (
 	REDUCE
 )
 
-type MapTask struct {
-	file      string
-	timeStamp time.Time
-	taskState TaskState
-	taskType  TaskType
+type TaskArgs struct {
 }
 
-type ReduceTask struct {
-	intermediateFile string
-	timeStamp        time.Time
-	taskState        TaskState
-	taskType         TaskType
+type TaskResponse struct {
+	file     string
+	id       int
+	taskType TaskType
+	nReduce  int
+}
+
+type TaskDoneResponse struct {
+	taskName string
+	taskType TaskType
 }
 
 // Cook up a unique-ish UNIX-domain socket name
