@@ -41,10 +41,13 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 
+		fmt.Printf("VAD %v \n",response.TaskType)
 		if response.TaskType == MAP {
 			handleMapTask(response.File, response.Id, response.NReduce, mapf)
+			fmt.Printf("R %v \n", response.Id)
 			CallCompleteTask(response.TaskType, response.Id)
 
 		} else if response.TaskType == REDUCE {

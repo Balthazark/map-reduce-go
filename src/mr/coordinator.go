@@ -2,6 +2,7 @@ package mr
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -66,13 +67,16 @@ func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	if args.TaskType == MAP {
+	fmt.Println("TASKS", c.mapTasks)
+
+	if args.TaskType == MAP && c.mapTasks[args.TaskId].taskState != COMPLETED {
 		c.mapTasks[args.TaskId].taskState = COMPLETED
-		c.mapTasksRemaining -= 1
-	} else {
+		c.mapTasksRemaining--
+	} else if args.TaskType == REDUCE && c.mapTasks[args.TaskId].taskState != COMPLETED {
 		c.reduceTasks[args.TaskId].taskState = COMPLETED
-		c.reduceTasksRemaining -= 1
+		c.reduceTasksRemaining--
 	}
+	fmt.Println("MAPR REDUCR", c.mapTasksRemaining, c.reduceTasksRemaining)
 	return nil
 }
 
@@ -104,26 +108,26 @@ func (c *Coordinator) Done() bool {
 
 // Handle timeouts for workers
 func (c *Coordinator) ReAssignTimeoutTasks() {
+	defer c.mutex.Unlock()
 	for {
+		c.mutex.Lock()
 		if c.mapTasksRemaining > 0 {
 
 			for _, task := range c.mapTasks {
 				if task.taskState == BUSY && time.Since(task.timestamp).Seconds() > 10 {
-					c.mutex.Lock()
 					task.taskState = READY
-					c.mutex.Unlock()
 				}
 			}
 		} else if c.reduceTasksRemaining > 0 {
 			for _, task := range c.reduceTasks {
 				if task.taskState == BUSY && time.Since(task.timestamp).Seconds() > 10 {
-					c.mutex.Lock()
 					task.taskState = READY
-					c.mutex.Unlock()
 				}
 			}
 
 		}
+		c.mutex.Unlock()
+
 	}
 
 }
@@ -134,8 +138,8 @@ func (c *Coordinator) ReAssignTimeoutTasks() {
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	// Your code here.
 	c := Coordinator{
-		mapTasks:             []Task{},
-		reduceTasks:          []Task{},
+		mapTasks:             make([]Task, len(files)), // Initialize the slice with the correct length
+		reduceTasks:          make([]Task, nReduce),
 		mutex:                sync.Mutex{},
 		mapTasksRemaining:    len(files),
 		reduceTasksRemaining: nReduce,
@@ -148,7 +152,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 			id:        i,
 			taskState: READY,
 		}
-		c.mapTasks = append(c.mapTasks, task)
+		c.mapTasks[i] = task
 
 	}
 
@@ -157,7 +161,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 			id:        i,
 			taskState: READY,
 		}
-		c.reduceTasks = append(c.reduceTasks, task)
+		c.reduceTasks[i] = task
 	}
 
 	go c.ReAssignTimeoutTasks()
