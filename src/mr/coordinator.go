@@ -67,12 +67,10 @@ func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	fmt.Println("TASKS", c.mapTasks)
-
 	if args.TaskType == MAP && c.mapTasks[args.TaskId].taskState != COMPLETED {
 		c.mapTasks[args.TaskId].taskState = COMPLETED
 		c.mapTasksRemaining--
-	} else if args.TaskType == REDUCE && c.mapTasks[args.TaskId].taskState != COMPLETED {
+	} else if args.TaskType == REDUCE && c.reduceTasks[args.TaskId].taskState != COMPLETED {
 		c.reduceTasks[args.TaskId].taskState = COMPLETED
 		c.reduceTasksRemaining--
 	}

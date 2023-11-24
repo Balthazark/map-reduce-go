@@ -44,10 +44,8 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			return
 		}
 
-		fmt.Printf("VAD %v \n",response.TaskType)
 		if response.TaskType == MAP {
 			handleMapTask(response.File, response.Id, response.NReduce, mapf)
-			fmt.Printf("R %v \n", response.Id)
 			CallCompleteTask(response.TaskType, response.Id)
 
 		} else if response.TaskType == REDUCE {
@@ -72,35 +70,42 @@ func handleMapTask(fileName string, taskId int, nReduce int, mapf func(string, s
 	file.Close()
 
 	keyValues := mapf(fileName, string(content))
+	collectedKeyValue := make(map[int][]KeyValue)
 
-	for _, keyValue := range keyValues {
-		reduceId := ihash(keyValue.Key) % nReduce
-		intermediateFile, err := os.Create(fmt.Sprintf("m-%d-%-d", taskId, reduceId))
+	for _, keys := range keyValues {
+		reduceId := ihash(keys.Key) % nReduce
+
+		collectedKeyValue[reduceId] = append(collectedKeyValue[reduceId], keys)
+
+	}
+
+	for reduceId, keyValue := range collectedKeyValue {
+		intermediateFile,err := os.Create(fmt.Sprintf("mr-%d-%d", taskId, reduceId))
 
 		if err != nil {
 			log.Fatalf("Cannot create file")
 		}
 		encoder := json.NewEncoder(intermediateFile)
 
-		encoderErr := encoder.Encode(keyValue)
+		for _, kv := range keyValue {
+			encoderErr := encoder.Encode(&kv)
 
-		if encoderErr != nil {
-			log.Fatal("Failed to encode key value")
+			if encoderErr != nil {
+				log.Fatal("Failed to encode key value")
+			}
 		}
-
 	}
 
 }
 
 func handleReduceTask(taskId int, reducef func(string, []string) string) {
-	files, err := filepath.Glob(fmt.Sprintf("m-*-%d", taskId))
+	files, err := filepath.Glob(fmt.Sprintf("mr-*-%d", taskId))
 
 	if err != nil {
 		log.Fatal("Could not find files")
 	}
 
 	keyValues := []KeyValue{}
-	var keyValue KeyValue
 
 	for _, filePath := range files {
 		file, openErr := os.Open(filePath)
@@ -111,7 +116,10 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 
 		decoder := json.NewDecoder(file)
 
+		fmt.Printf("FILE %v", file.Name())
+
 		for decoder.More() {
+			var keyValue KeyValue
 			decodeErr := decoder.Decode(&keyValue)
 
 			if decodeErr != nil {
@@ -124,7 +132,7 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 
 	sort.Sort(ByKey(keyValues))
 
-	outputFile, createErr := os.Create(fmt.Sprintf("m-out-%d", taskId))
+	outputFile, createErr := os.Create(fmt.Sprintf("mr-out-%d", taskId))
 
 	if createErr != nil {
 		log.Fatal("Could not create file")
@@ -150,8 +158,8 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 		} else {
 			i++
 		}
-		fmt.Println("KEY VALUES MAP")
-		fmt.Printf("%+v\n", keyValueMap)
+		/* fmt.Println("KEY VALUES MAP")
+		fmt.Printf("%+v\n", keyValueMap) */
 	}
 
 	for key, value := range keyValueMap {
