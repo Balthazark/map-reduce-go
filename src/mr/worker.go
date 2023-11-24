@@ -43,13 +43,13 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			fmt.Println(err)
 		}
 
-		if response.taskType == MAP {
-			handleMapTask(response.file,response.id,response.nReduce,mapf)
-			CallCompleteTask(response.taskType,response.id)
+		if response.TaskType == MAP {
+			handleMapTask(response.File, response.Id, response.NReduce, mapf)
+			CallCompleteTask(response.TaskType, response.Id)
 
-		} else {
-			handleReduceTask(response.id,reducef)
-			CallCompleteTask(response.taskType,response.id)
+		} else if response.TaskType == REDUCE {
+			handleReduceTask(response.Id, reducef)
+			CallCompleteTask(response.TaskType, response.Id)
 		}
 	}
 
@@ -60,7 +60,7 @@ func handleMapTask(fileName string, taskId int, nReduce int, mapf func(string, s
 	file, err := os.Open(fileName)
 
 	if err != nil {
-		log.Fatalf("Failed to open file %v", fileName)
+		log.Fatalf("Failed to open file in map handler %v", fileName)
 	}
 	content, err := io.ReadAll(file)
 	if err != nil {
@@ -103,7 +103,7 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 		file, openErr := os.Open(filePath)
 
 		if openErr != nil {
-			log.Fatalf("Could not open file")
+			log.Fatalf("Could not open files in reduce handler")
 		}
 
 		decoder := json.NewDecoder(file)
@@ -127,21 +127,28 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 		log.Fatal("Could not create file")
 	}
 
-	keyValueMap := make(map[string][]string)
+	keyValueMap := map[string][]string{}
 
 	i := 0
 	for i < len(keyValues) {
 		key := keyValues[i].Key
 		keyValueMap[key] = append(keyValueMap[key], keyValues[i].Value)
-		for {
-			i++
-			if key == keyValues[i].Key {
-				keyValueMap[key] = append(keyValueMap[key], keyValues[i].Value)
-			} else {
-				break
-			}
-		}
 
+		// Check if there are more elements in the slice before accessing keyValues[i+1]
+		if i+1 < len(keyValues) && key == keyValues[i+1].Key {
+			for {
+				i++
+				if i+1 < len(keyValues) && key == keyValues[i+1].Key {
+					keyValueMap[key] = append(keyValueMap[key], keyValues[i].Value)
+				} else {
+					break
+				}
+			}
+		} else {
+			i++
+		}
+		fmt.Println("KEY VALUES MAP")
+		fmt.Printf("%+v\n", keyValueMap)
 	}
 
 	for key, value := range keyValueMap {
@@ -155,8 +162,8 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 
 func CallCompleteTask(task TaskType, id int) error {
 	args := TaskDoneArgs{
-		taskId: id,
-		taskType: task,
+		TaskId:   id,
+		TaskType: task,
 	}
 	response := TaskDoneResponse{}
 
@@ -179,6 +186,7 @@ func CallGetTask() (*TaskResponse, error) {
 	ok := call("Coordinator.GetTask", &args, &response)
 	if ok {
 		fmt.Printf("call succeeded \n")
+		fmt.Println("response in call function", &response)
 		return &response, nil
 	} else {
 		return nil, errors.New("failed to get task during call")

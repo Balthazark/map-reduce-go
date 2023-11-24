@@ -38,10 +38,10 @@ func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
 			if task.taskState == READY {
 				task.timestamp = time.Now()
 				task.taskState = BUSY
-				taskReply.file = task.file
-				taskReply.id = task.id
-				taskReply.nReduce = c.nReduce
-				taskReply.taskType = MAP
+				taskReply.File = task.file
+				taskReply.Id = task.id
+				taskReply.NReduce = c.nReduce
+				taskReply.TaskType = MAP
 				return nil
 			}
 		}
@@ -52,8 +52,8 @@ func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
 			if task.taskState == READY {
 				task.timestamp = time.Now()
 				task.taskState = BUSY
-				taskReply.id = task.id
-				taskReply.taskType = REDUCE
+				taskReply.Id = task.id
+				taskReply.TaskType = REDUCE
 				return nil
 
 			}
@@ -66,11 +66,11 @@ func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	if args.taskType == MAP {
-		c.mapTasks[args.taskId].taskState = COMPLETED
+	if args.TaskType == MAP {
+		c.mapTasks[args.TaskId].taskState = COMPLETED
 		c.mapTasksRemaining -= 1
 	} else {
-		c.reduceTasks[args.taskId].taskState = COMPLETED
+		c.reduceTasks[args.TaskId].taskState = COMPLETED
 		c.reduceTasksRemaining -= 1
 	}
 	return nil
@@ -134,13 +134,14 @@ func (c *Coordinator) ReAssignTimeoutTasks() {
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	// Your code here.
 	c := Coordinator{
-		mapTasks:             make([]Task, len(files)),
-		reduceTasks:          make([]Task, nReduce),
+		mapTasks:             []Task{},
+		reduceTasks:          []Task{},
 		mutex:                sync.Mutex{},
 		mapTasksRemaining:    len(files),
 		reduceTasksRemaining: nReduce,
 		nReduce:              nReduce,
 	}
+
 	for i, inputFile := range files {
 		task := Task{
 			file:      inputFile,
@@ -148,6 +149,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 			taskState: READY,
 		}
 		c.mapTasks = append(c.mapTasks, task)
+
 	}
 
 	for i := 0; i < nReduce; i++ {

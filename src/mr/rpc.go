@@ -12,38 +12,39 @@ import (
 )
 
 // Add your RPC definitions here.
-type TaskState int
+type TaskState string
 
 const (
-	READY = iota
-	BUSY
-	COMPLETED
-	CANCELED
+	READY     TaskState = "READY"
+	BUSY      TaskState = "BUSY"
+	COMPLETED TaskState = "COMPLETED"
+	CANCELED  TaskState = "CANCELED"
 )
 
-type TaskType int
+type TaskType string
 
 const (
-	MAP = iota
-	REDUCE
+	MAP    TaskType = "MAP"
+	REDUCE TaskType = "REDUCE"
 )
 
 type TaskArgs struct {
 }
 
+// Capitalize fields to solve export error
 type TaskResponse struct {
-	file     string
-	id       int
-	taskType TaskType
-	nReduce  int
+	File     string
+	Id       int
+	TaskType TaskType
+	NReduce  int
 }
 
 type TaskDoneArgs struct {
-	taskId int
-	taskType TaskType
+	TaskId   int
+	TaskType TaskType
 }
 
-type TaskDoneResponse struct {}
+type TaskDoneResponse struct{}
 
 // Cook up a unique-ish UNIX-domain socket name
 // in /var/tmp, for the coordinator.
