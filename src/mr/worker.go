@@ -45,6 +45,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 		}
 
 		if response.TaskType == MAP {
+			fmt.Println("REDUCE ID %d",response.Id)
 			handleMapTask(response.File, response.Id, response.NReduce, mapf)
 			CallCompleteTask(response.TaskType, response.Id)
 
@@ -80,12 +81,13 @@ func handleMapTask(fileName string, taskId int, nReduce int, mapf func(string, s
 	}
 
 	for reduceId, keyValue := range collectedKeyValue {
-		intermediateFile,err := os.Create(fmt.Sprintf("mr-%d-%d", taskId, reduceId))
+		intermediatedFile := fmt.Sprintf("mr-%d-%d", taskId, reduceId)
+		tmpFile,err := os.Create(fmt.Sprintf("mr-%d-%d-%d", taskId, reduceId,os.Getpid()))
 
 		if err != nil {
 			log.Fatalf("Cannot create file")
 		}
-		encoder := json.NewEncoder(intermediateFile)
+		encoder := json.NewEncoder(tmpFile)
 
 		for _, kv := range keyValue {
 			encoderErr := encoder.Encode(&kv)
@@ -94,12 +96,15 @@ func handleMapTask(fileName string, taskId int, nReduce int, mapf func(string, s
 				log.Fatal("Failed to encode key value")
 			}
 		}
+
+		tmpFile.Close()
+		os.Rename(tmpFile.Name(),intermediatedFile)
 	}
 
 }
 
 func handleReduceTask(taskId int, reducef func(string, []string) string) {
-	files, err := filepath.Glob(fmt.Sprintf("mr-*-%d", taskId))
+	files, err := filepath.Glob(fmt.Sprintf("mr-[0-9]*-%d", taskId))
 
 	if err != nil {
 		log.Fatal("Could not find files")
@@ -132,7 +137,8 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 
 	sort.Sort(ByKey(keyValues))
 
-	outputFile, createErr := os.Create(fmt.Sprintf("mr-out-%d", taskId))
+	outputFile := fmt.Sprintf("mr-out-%d", taskId)
+	tmpFile, createErr := os.Create(fmt.Sprintf("mr-out-%d-%d", taskId,os.Getpid()))
 
 	if createErr != nil {
 		log.Fatal("Could not create file")
@@ -165,10 +171,11 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 	for key, value := range keyValueMap {
 
 		output := reducef(key, value)
-		fmt.Fprintf(outputFile, "%v %v\n", key, output)
+		fmt.Fprintf(tmpFile, "%v %v\n", key, output)
 	}
 
-	outputFile.Close()
+	tmpFile.Close()
+	os.Rename(tmpFile.Name(),outputFile)
 }
 
 func CallCompleteTask(task TaskType, id int) error {

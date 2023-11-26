@@ -2,7 +2,6 @@ package mr
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -32,7 +31,6 @@ type Coordinator struct {
 
 func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
 	c.mutex.Lock()
-	defer c.mutex.Unlock()
 
 	if c.mapTasksRemaining > 0 {
 		for _, task := range c.mapTasks {
@@ -43,6 +41,7 @@ func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
 				taskReply.Id = task.id
 				taskReply.NReduce = c.nReduce
 				taskReply.TaskType = MAP
+				c.mutex.Unlock()
 				return nil
 			}
 		}
@@ -55,11 +54,13 @@ func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
 				task.taskState = BUSY
 				taskReply.Id = task.id
 				taskReply.TaskType = REDUCE
+				c.mutex.Unlock()
 				return nil
 
 			}
 		}
 	}
+	c.mutex.Unlock()
 	return errors.New("all tasks completed")
 }
 
@@ -74,7 +75,6 @@ func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error {
 		c.reduceTasks[args.TaskId].taskState = COMPLETED
 		c.reduceTasksRemaining--
 	}
-	fmt.Println("MAPR REDUCR", c.mapTasksRemaining, c.reduceTasksRemaining)
 	return nil
 }
 
