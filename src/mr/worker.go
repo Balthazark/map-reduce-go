@@ -40,12 +40,10 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 		response, err := CallGetTask()
 
 		if err != nil {
-			fmt.Println(err)
-			return
+			continue
 		}
 
 		if response.TaskType == MAP {
-			fmt.Println("REDUCE ID %d",response.Id)
 			handleMapTask(response.File, response.Id, response.NReduce, mapf)
 			CallCompleteTask(response.TaskType, response.Id)
 
@@ -110,6 +108,8 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 		log.Fatal("Could not find files")
 	}
 
+	fmt.Println(files)
+
 	keyValues := []KeyValue{}
 
 	for _, filePath := range files {
@@ -121,7 +121,7 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 
 		decoder := json.NewDecoder(file)
 
-		fmt.Printf("FILE %v", file.Name())
+		fmt.Printf("FILE %v \n", file.Name())
 
 		for decoder.More() {
 			var keyValue KeyValue
@@ -204,7 +204,6 @@ func CallGetTask() (*TaskResponse, error) {
 	ok := call("Coordinator.GetTask", &args, &response)
 	if ok {
 		fmt.Printf("call succeeded \n")
-		fmt.Println("response in call function", &response)
 		return &response, nil
 	} else {
 		return nil, errors.New("failed to get task during call")

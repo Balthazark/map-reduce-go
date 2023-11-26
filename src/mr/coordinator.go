@@ -47,6 +47,8 @@ func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
                 return nil
             }
         }
+		c.mutex.Unlock()
+		return nil
     }
 
     if c.reduceTasksRemaining > 0 {
@@ -69,7 +71,6 @@ func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
 
 func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error {
 	c.mutex.Lock()
-	defer c.mutex.Unlock()
 
 	if args.TaskType == MAP && c.mapTasks[args.TaskId].taskState != COMPLETED {
 		c.mapTasks[args.TaskId].taskState = COMPLETED
@@ -78,6 +79,7 @@ func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error {
 		c.reduceTasks[args.TaskId].taskState = COMPLETED
 		c.reduceTasksRemaining--
 	}
+	c.mutex.Unlock()
 	return nil
 }
 
@@ -99,28 +101,31 @@ func (c *Coordinator) server() {
 // if the entire job has finished.
 func (c *Coordinator) Done() bool {
 	c.mutex.Lock()
-	defer c.mutex.Unlock()
 	if c.mapTasksRemaining == 0 && c.reduceTasksRemaining == 0 {
+		fmt.Print("DONE")
+		c.mutex.Unlock()
 		return true
 	} else {
+		c.mutex.Unlock()
 		return false
 	}
 }
 
 // Handle timeouts for workers
 func (c *Coordinator) ReAssignTimeoutTasks() {
-	defer c.mutex.Unlock()
 	for {
 		c.mutex.Lock()
 		if c.mapTasksRemaining > 0 {
 
-			for _, task := range c.mapTasks {
+			for i := range c.mapTasks {
+				task := &c.mapTasks[i]
 				if task.taskState == BUSY && time.Since(task.timestamp).Seconds() > 10 {
 					task.taskState = READY
 				}
 			}
 		} else if c.reduceTasksRemaining > 0 {
-			for _, task := range c.reduceTasks {
+			for i := range c.reduceTasks {
+				task := &c.reduceTasks[i]
 				if task.taskState == BUSY && time.Since(task.timestamp).Seconds() > 10 {
 					task.taskState = READY
 				}
