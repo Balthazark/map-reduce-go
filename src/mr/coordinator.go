@@ -31,43 +31,42 @@ type Coordinator struct {
 // Your code here -- RPC handlers for the worker to call.
 
 func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
-    c.mutex.Lock()
+	c.mutex.Lock()
 
-    if c.mapTasksRemaining > 0 {
-        for i := range c.mapTasks {
-            task := &c.mapTasks[i] 
-            if task.taskState == READY {
-                task.timestamp = time.Now()
-                task.taskState = BUSY
-                taskReply.File = task.file
-                taskReply.Id = task.id
-                taskReply.NReduce = c.nReduce
-                taskReply.TaskType = MAP
+	if c.mapTasksRemaining > 0 {
+		for i := range c.mapTasks {
+			task := &c.mapTasks[i]
+			if task.taskState == READY {
+				task.timestamp = time.Now()
+				task.taskState = BUSY
+				taskReply.File = task.file
+				taskReply.Id = task.id
+				taskReply.NReduce = c.nReduce
+				taskReply.TaskType = MAP
 				c.mutex.Unlock()
-                return nil
-            }
-        }
+				return nil
+			}
+		}
 		c.mutex.Unlock()
 		return nil
-    }
+	}
 
-    if c.reduceTasksRemaining > 0 {
-        for i := range c.reduceTasks {
-            task := &c.reduceTasks[i]
-            if task.taskState == READY {
-                task.timestamp = time.Now()
-                task.taskState = BUSY
-                taskReply.Id = task.id
-                taskReply.TaskType = REDUCE
+	if c.reduceTasksRemaining > 0 {
+		for i := range c.reduceTasks {
+			task := &c.reduceTasks[i]
+			if task.taskState == READY {
+				task.timestamp = time.Now()
+				task.taskState = BUSY
+				taskReply.Id = task.id
+				taskReply.TaskType = REDUCE
 				c.mutex.Unlock()
-                return nil
-            }
-        }
-    }
-    c.mutex.Unlock()
-    return errors.New("all tasks assigned waiting to finish")
+				return nil
+			}
+		}
+	}
+	c.mutex.Unlock()
+	return errors.New("all tasks assigned waiting to finish")
 }
-
 
 func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error {
 	c.mutex.Lock()
@@ -102,7 +101,7 @@ func (c *Coordinator) server() {
 func (c *Coordinator) Done() bool {
 	c.mutex.Lock()
 	if c.mapTasksRemaining == 0 && c.reduceTasksRemaining == 0 {
-		fmt.Print("DONE")
+		fmt.Println("DONE")
 		c.mutex.Unlock()
 		return true
 	} else {
@@ -144,7 +143,7 @@ func (c *Coordinator) ReAssignTimeoutTasks() {
 func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	// Your code here.
 	c := Coordinator{
-		mapTasks:             make([]Task, len(files)), // Initialize the slice with the correct length
+		mapTasks:             make([]Task, len(files)),
 		reduceTasks:          make([]Task, nReduce),
 		mutex:                sync.Mutex{},
 		mapTasksRemaining:    len(files),
@@ -169,8 +168,8 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 		}
 		c.reduceTasks[i] = task
 	}
-	
-	fmt.Println("MTASKS, RTASKS", len(c.mapTasks), len(c.reduceTasks))
+
+	fmt.Println("Map Tasks, Reduce Tasks", len(c.mapTasks), len(c.reduceTasks))
 
 	go c.ReAssignTimeoutTasks()
 

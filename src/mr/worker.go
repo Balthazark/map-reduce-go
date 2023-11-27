@@ -80,7 +80,7 @@ func handleMapTask(fileName string, taskId int, nReduce int, mapf func(string, s
 
 	for reduceId, keyValue := range collectedKeyValue {
 		intermediatedFile := fmt.Sprintf("mr-%d-%d", taskId, reduceId)
-		tmpFile,err := os.Create(fmt.Sprintf("mr-%d-%d-%d", taskId, reduceId,os.Getpid()))
+		tmpFile, err := os.Create(fmt.Sprintf("mr-%d-%d-%d", taskId, reduceId, os.Getpid()))
 
 		if err != nil {
 			log.Fatalf("Cannot create file")
@@ -96,7 +96,7 @@ func handleMapTask(fileName string, taskId int, nReduce int, mapf func(string, s
 		}
 
 		tmpFile.Close()
-		os.Rename(tmpFile.Name(),intermediatedFile)
+		os.Rename(tmpFile.Name(), intermediatedFile)
 	}
 
 }
@@ -121,8 +121,6 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 
 		decoder := json.NewDecoder(file)
 
-		fmt.Printf("FILE %v \n", file.Name())
-
 		for decoder.More() {
 			var keyValue KeyValue
 			decodeErr := decoder.Decode(&keyValue)
@@ -138,7 +136,7 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 	sort.Sort(ByKey(keyValues))
 
 	outputFile := fmt.Sprintf("mr-out-%d", taskId)
-	tmpFile, createErr := os.Create(fmt.Sprintf("mr-out-%d-%d", taskId,os.Getpid()))
+	tmpFile, createErr := os.Create(fmt.Sprintf("mr-out-%d-%d", taskId, os.Getpid()))
 
 	if createErr != nil {
 		log.Fatal("Could not create file")
@@ -146,26 +144,15 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 
 	keyValueMap := map[string][]string{}
 
-	i := 0
-	for i < len(keyValues) {
+	for i := 0; i < len(keyValues); i++ {
 		key := keyValues[i].Key
 		keyValueMap[key] = append(keyValueMap[key], keyValues[i].Value)
-
-		// Check if there are more elements in the slice before accessing keyValues[i+1]
-		if i+1 < len(keyValues) && key == keyValues[i+1].Key {
-			for {
-				i++
-				if i+1 < len(keyValues) && key == keyValues[i+1].Key {
-					keyValueMap[key] = append(keyValueMap[key], keyValues[i].Value)
-				} else {
-					break
-				}
-			}
-		} else {
+	
+		// Check for consecutive duplicate keys
+		for i+1 < len(keyValues) && key == keyValues[i+1].Key {
 			i++
+			keyValueMap[key] = append(keyValueMap[key], keyValues[i].Value)
 		}
-		/* fmt.Println("KEY VALUES MAP")
-		fmt.Printf("%+v\n", keyValueMap) */
 	}
 
 	for key, value := range keyValueMap {
@@ -175,7 +162,7 @@ func handleReduceTask(taskId int, reducef func(string, []string) string) {
 	}
 
 	tmpFile.Close()
-	os.Rename(tmpFile.Name(),outputFile)
+	os.Rename(tmpFile.Name(), outputFile)
 }
 
 func CallCompleteTask(task TaskType, id int) error {
