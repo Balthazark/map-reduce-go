@@ -65,7 +65,7 @@ func (c *Coordinator) GetTask(args *TaskArgs, taskReply *TaskResponse) error {
         }
     }
     c.mutex.Unlock()
-    return errors.New("all tasks completed")
+    return errors.New("all tasks assigned waiting to finish")
 }
 
 
