@@ -85,7 +85,7 @@ func (c *Coordinator) TaskComplete(args *TaskDoneArgs, reply *TaskArgs) error {
 func (c *Coordinator) server() {
 	rpc.Register(c)
 	rpc.HandleHTTP()
-	l, e := net.Listen("tcp", ":1234")
+	l, e := net.Listen("tcp", ":8080")
 	// sockname := coordinatorSock()
 	// os.Remove(sockname)
 	// l, e := net.Listen("unix", sockname)
