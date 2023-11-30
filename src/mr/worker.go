@@ -201,7 +201,7 @@ func CallGetTask() (*TaskResponse, error) {
 // usually returns true.
 // returns false if something goes wrong.
 func call(rpcname string, args interface{}, reply interface{}) bool {
-	c, err := rpc.DialHTTP("tcp", "18.204.6.133"+":1234")
+	c, err := rpc.DialHTTP("tcp", "34.227.101.225"+":8080")
 	// sockname := coordinatorSock()
 	// c, err := rpc.DialHTTP("unix", sockname)
 	if err != nil {
